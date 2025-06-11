@@ -2,3 +2,12 @@
 
 env/
 faiss_index/
+
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# VSCode
+.vscode/

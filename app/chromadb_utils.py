@@ -1,0 +1,54 @@
+# app/chromadb_utils.py
+
+import chromadb
+from chromadb.config import Settings
+from sentence_transformers import SentenceTransformer
+from typing import List, Dict
+import uuid
+
+# Initialize ChromaDB client
+client = chromadb.Client(Settings(
+    chroma_db_impl="duckdb+parquet",
+    persist_directory="./chroma_db"
+))
+
+# Create or load collection
+collection = client.get_or_create_collection(
+    name="news_chunks",
+    metadata={"hnsw:space": "cosine"}
+)
+
+# Load embedder
+embedder = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
+
+def upsert_chunks(chunks: List[Dict]):
+    documents = [chunk["chunk"] for chunk in chunks]
+    metadatas = [{"title": c["title"], "source": c["source"], "link": c["link"]} for c in chunks]
+    ids = [str(uuid.uuid4()) for _ in chunks]
+    embeddings = embedder.encode(documents).tolist()
+
+    collection.add(
+        documents=documents,
+        metadatas=metadatas,
+        embeddings=embeddings,
+        ids=ids
+    )
+
+def search_similar_chunks(query: str, top_k: int = 10) -> List[Dict]:
+    query_embedding = embedder.encode(query).tolist()
+
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k,
+        include=["documents", "metadatas"]
+    )
+
+    output = []
+    for doc, meta in zip(results["documents"][0], results["metadatas"][0]):
+        output.append({
+            "chunk": doc,
+            "title": meta["title"],
+            "source": meta["source"],
+            "link": meta["link"]
+        })
+    return output
