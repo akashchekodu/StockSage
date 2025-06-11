@@ -2,6 +2,11 @@
 
 StockSage is a financial assistant that answers user questions using recent news articles via a powerful Retrieval-Augmented Generation (RAG) pipeline. It combines semantic chunking, hybrid search (BM25 + embeddings + cross-encoder reranking), and LLMs for accurate and contextual responses.
 
+This project implements a hybrid retriever+generator approach:
+- **Retriever**: Fetches and semantically chunks financial news from a PostgreSQL database.
+- **Generator**: Uses an LLM to answer questions based only on the retrieved, relevant content.
+
+
 ---
 
 ## 🚀 Features
@@ -86,6 +91,12 @@ DB_CONNECTION_STRING=postgresql://user:password@host:port/dbname
 ```bash
 python main.py
 ```
+## 🧾 Data Source
+
+> The financial news data used in this project is collected and stored via a separate scraping pipeline available here:  
+> 👉 [FinScrape GitHub Repository](https://github.com/akashchekodu/FinScrape)
+
+Make sure to run `FinScrape` to populate your local PostgreSQL database with the latest financial news before using StockSage.
 
 ---
 
