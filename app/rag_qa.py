@@ -22,14 +22,21 @@ def run_rag_pipeline(query: str):
     context = "\n\n".join(context_parts)
 
     # 🧠 Step 3: Construct the prompt
-    prompt = f"""You are a financial assistant. Based only on the news below, answer the user's question with detailed explanation.
-Use only the information provided.
+    prompt = f"""You are a helpful and precise financial assistant. Use only the information from the news articles below to answer the user's question. 
+        Do not rely on prior knowledge or assumptions. If the answer is not present in the news, clearly state that.
 
-News Articles:
-{context}
+        --- NEWS ARTICLES ---
+        {context}
 
-Question: {query}
-Answer:"""
+        --- USER QUESTION ---
+        {query}
+
+        --- INSTRUCTIONS ---
+        - Base your answer strictly on the provided news articles.
+        - Provide a clear and detailed explanation with references to the relevant article content.
+        - If the information is incomplete or missing, say: "The available news does not provide enough information to answer this question reliably."
+
+        Answer:"""
 
     # 🤖 Step 4: Call the LLM
     answer = call_mistral(prompt)

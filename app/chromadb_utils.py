@@ -1,24 +1,20 @@
 # app/chromadb_utils.py
 
-import chromadb
-from chromadb.config import Settings
+from chromadb import PersistentClient
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict
 import uuid
 
-# Initialize ChromaDB client
-client = chromadb.Client(Settings(
-    chroma_db_impl="duckdb+parquet",
-    persist_directory="./chroma_db"
-))
+# ✅ Initialize ChromaDB persistent client (new API)
+client = PersistentClient(path="./chroma_db")
 
-# Create or load collection
+# ✅ Create or load collection
 collection = client.get_or_create_collection(
     name="news_chunks",
     metadata={"hnsw:space": "cosine"}
 )
 
-# Load embedder
+# ✅ Load embedder
 embedder = SentenceTransformer("multi-qa-mpnet-base-dot-v1")
 
 def upsert_chunks(chunks: List[Dict]):

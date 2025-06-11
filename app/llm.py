@@ -20,7 +20,7 @@ class MistralLLM:
             tokenizer=self.tokenizer,
             max_new_tokens=512,
             do_sample=True,
-            temperature=0.7,
+            temperature=0.6,
             top_p=0.9,
             top_k=50,
             repetition_penalty=1.1

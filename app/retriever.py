@@ -164,17 +164,21 @@ def rank_with_semantic_similarity(query: str, chunks: List[Dict]) -> List[tuple]
     return sorted(ranked, key=lambda x: x[1], reverse=True)
 
 
-def rerank_with_cross_encoder(query: str, ranked_chunks: List[tuple], top_k: int) -> List[Dict]:
+def rerank_with_cross_encoder(query: str, ranked_chunks: List[tuple], top_k: int = None) -> List[Tuple[Dict, float]]:
     cross_inputs = [
         (query, f"{chunk['title']} ({chunk['source']} - {chunk['link']}):\n{chunk['chunk']}")
         for chunk, _ in ranked_chunks
     ]
     cross_scores = cross_encoder.predict(cross_inputs)
 
-    reranked = [
-        chunk for _, (chunk, _) in sorted(zip(cross_scores, ranked_chunks), key=lambda x: x[0], reverse=True)
-    ]
-    return reranked[:top_k]
+    reranked = sorted(
+        zip(ranked_chunks, cross_scores),
+        key=lambda x: x[1],  # sort by cross score
+        reverse=True
+    )
+
+    return [(chunk, score) for ((chunk, _), score) in reranked[:top_k]] if top_k else [(chunk, score) for ((chunk, _), score) in reranked]
+
 
 
 def hybrid_top_chunks(query: str, chunks: List[Dict], top_n_each: int = 50, title_weight: int = 3, source_weight: int = 1) -> List[Dict]:
@@ -204,8 +208,8 @@ def hybrid_top_chunks(query: str, chunks: List[Dict], top_n_each: int = 50, titl
     return all_top_chunks
 
 
-def get_relevant_articles(query: str, top_k: int = 5) -> List[Dict]:
-    top_chunks = search_similar_chunks(query, top_k * 3)  # ✅ ChromaDB used here
+def get_relevant_articles(query: str, top_k: int = 5, min_score: float = 0.4) -> List[Dict]:
+    top_chunks = search_similar_chunks(query, top_k * 3)  # Get more to allow filtering
 
     if not top_chunks:
         print("⚠️ No results from ChromaDB.")
@@ -215,10 +219,16 @@ def get_relevant_articles(query: str, top_k: int = 5) -> List[Dict]:
     grouped_articles = group_top_chunks_per_article(semantically_ranked, top_n_per_article=3)
 
     dummy_scores = [(article, 0.0) for article in grouped_articles]
-    final_ranked = rerank_with_cross_encoder(query, dummy_scores, top_k)
+    reranked_with_scores = rerank_with_cross_encoder(query, dummy_scores)
 
-    print(f"\n✅ Final top {top_k} results:")
-    for i, doc in enumerate(final_ranked):
-        print(f"{i+1}. {doc['title']} [{doc['source']}]")
+    # ✅ Filter by min_score
+    filtered = [(chunk, score) for chunk, score in reranked_with_scores if score >= min_score]
 
-    return final_ranked
+    # ✅ Limit to top_k if enough remain
+    final_results = [chunk for chunk, score in filtered[:top_k]]
+
+    # print(f"\n✅ Returning {len(final_results)} result(s) with score ≥ {min_score}:")
+    # for i, doc in enumerate(final_results):
+    #     print(f"{i+1}. {doc['title']} [{doc['source']}]")
+
+    return final_results
